@@ -1,13 +1,131 @@
-<html>
-
+<!DOCTYPE html>
+<html lang="it">
 <head>
-  <title>Express</title>
-  <link rel="stylesheet" href="/stylesheets/style.css">
+
+    <title>Progetto programmazione web e mobile</title>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <!-- load the d3.js library -->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+    <script type="text/javascript">
+        var dataToChar = [];
+        dataToChar.push(['# tweet','likes','retweet']);
+        var numbersTweet = 1;
+
+
+        window.addEventListener('load', function() {
+            infoUser();
+            var resultTweets;
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function(){
+                if (this.readyState == 4 && this.status == 200){
+                     var array = JSON.parse(this.responseText)
+                     array.forEach(fillData);
+                     console.log(dataToChar);
+                     google.charts.load('current', {'packages':['corechart']});
+                     google.charts.setOnLoadCallback(drawChart);
+                }
+            };
+            xhttp.open("GET","/api/tweets",true);
+            xhttp.send();
+        })
+        function infoUser(){
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function(){
+                if (this.readyState == 4 && this.status == 200){
+                     var userInfo = JSON.parse(this.responseText)
+                     document.getElementById('userPhoto').src = userInfo.profile_image_url_https;
+                     document.getElementById('headerUser').innerHTML = document.getElementById('headerUser').innerHTML +
+                         '<h2>' + userInfo.name + "</h2><p>" + userInfo.description + '</p>';
+                }
+            };
+            xhttp.open("GET","/api/user",true);
+            xhttp.send();
+
+        }
+
+        function fillData(tweet){
+            var singleTweet = [];
+            singleTweet.push(numbersTweet);
+
+            var table = document.getElementById("result");
+            var row = table.insertRow(-1);
+            var textTweet = tweet.text;
+            var typeTweet = undefined;
+            var stats = "Likes : " + tweet.favorite_count + " - Retweet : " + tweet.retweet_count;
+            var dateHour = new Date(tweet.created_at);
+            if(tweet.retweeted_status != undefined){
+                typeTweet = "retweet";
+                stats = "Likes : " + tweet.retweeted_status.favorite_count + " - Retweet : " + tweet.retweeted_status.retweet_count;
+                textTweet = tweet.retweeted_status.text;
+                singleTweet.push(tweet.retweeted_status.favorite_count);
+                singleTweet.push(tweet.retweeted_status.retweet_count);
+            }else{
+                singleTweet.push(tweet.favorite_count);
+                singleTweet.push(tweet.retweet_count);
+                if(tweet.extended_entities != undefined){
+                     typeTweet = tweet.extended_entities.media[0].type;
+                }else{
+                    typeTweet = "text";
+                }
+            }
+            row.insertCell(0).innerHTML = numbersTweet;
+            row.insertCell(1).innerHTML = textTweet;
+            row.insertCell(2).innerHTML = typeTweet;
+            row.insertCell(3).innerHTML = stats;
+            row.insertCell(4).innerHTML = dateHour.toDateString();
+            dataToChar.push(singleTweet);
+            numbersTweet += 1;
+        }
+        function drawChart(){
+             var data = google.visualization.arrayToDataTable(dataToChar)
+
+            // append the svg object to the body of the page
+            var options = {
+              title: 'Twitter Metrics (Numbers of likes and retweet)',
+              legend: { position: 'bottom' },
+              vAxis:{viewWindow: {min: 0}}
+            };
+            var chart = new google.visualization.LineChart(document.getElementById('chartMetrics'));
+
+            chart.draw(data, options);
+        }
+    </script>
 </head>
 
 <body>
-  <h1>Express</h1>
-  <p>Welcome to Express</p>
+  <!-- As a heading -->
+    <nav class="navbar navbar-dark bg-dark">
+        <span class="navbar-brand mb-0 h1">Twitter Metrics</span>
+    </nav>
+    <br>
+    <div class="container">
+        <div id="headerUser">
+            <img id="userPhoto" class="rounded-circle">
+        </div>
+        <table class="table" id="resultTable">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Tweet</th>
+                    <th scope="col">Tipologia</th>
+                    <th scope="col">Statistiche</th>
+                    <th scope="col">Ora pubblicazione</th>
+                </tr>
+            </thead>
+            <tbody id="result"></tbody>
+        </table>
+        <div id="chartMetrics">
+
+        </div>
+  </div>
 </body>
 
 </html>
